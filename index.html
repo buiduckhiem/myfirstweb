@@ -1,19 +1,55 @@
 <!DOCTYPE html>
-<html>
+<html lang="vi">
 <head>
-    <title>Trang web của tôi</title>
+    <meta charset="UTF-8">
+    <title>Trình Trộn Đề AI</title>
     <style>
-        body { font-family: sans-serif; text-align: center; background: #f0f2f5; padding: 50px; }
-        .card { background: #e3f2fd; padding: 30px; border-radius: 15px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); display: inline-block; }
-        h1 { color: #007bff; }
-        button { background: #aebcea; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; }
+        body { font-family: sans-serif; display: flex; justify-content: center; padding: 20px; background: #f0f2f5; }
+        .card { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); width: 100%; max-width: 600px; }
+        textarea { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 8px; margin-top: 10px; resize: vertical; }
+        button { background: #007bff; color: white; border: none; padding: 12px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; margin-top: 15px; width: 100%; }
+        button:disabled { background: #ccc; }
+        #result { white-space: pre-wrap; background: #f8f9fa; padding: 15px; border-radius: 8px; margin-top: 20px; border-left: 5px solid #007bff; display: none; }
     </style>
 </head>
 <body>
     <div class="card">
-        <h1>Chào thế giới! 🚀</h1>
-        <p>Đây là trang web đầu tiên tôi đưa lên GitHub.</p>
-        <button onclick="alert('Chúc mừng bạn đã click thành công!')">Bấm vào đây nè!</button>
+        <h1>Máy Trộn Đề AI 🤖</h1>
+        <p>Dán nội dung đề thi của bạn vào đây:</p>
+        <textarea id="quizInput" rows="10" placeholder="Câu 1: ..."></textarea>
+        <button id="shuffleBtn" onclick="processAI()">Bắt đầu trộn bằng Gemini</button>
+        <div id="result"></div>
     </div>
+
+    <script>
+        async function processAI() {
+            const btn = document.getElementById('shuffleBtn');
+            const input = document.getElementById('quizInput').value;
+            const resultDiv = document.getElementById('result');
+
+            if (!input) return alert("Bạn chưa nhập đề mà!");
+
+            btn.disabled = true;
+            btn.innerText = "Gemini đang suy nghĩ...";
+            resultDiv.style.display = "none";
+
+            try {
+                // Gọi tới "não bộ" Netlify Function
+                const response = await fetch('/.netlify/functions/shuffle', {
+                    method: 'POST',
+                    body: JSON.stringify({ text: input })
+                });
+                
+                const data = await response.json();
+                resultDiv.innerText = data.shuffledText;
+                resultDiv.style.display = "block";
+            } catch (error) {
+                alert("Có lỗi xảy ra rồi!");
+            } finally {
+                btn.disabled = false;
+                btn.innerText = "Bắt đầu trộn bằng Gemini";
+            }
+        }
+    </script>
 </body>
 </html>
