@@ -2,54 +2,247 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <title>Trình Trộn Đề AI</title>
-    <style>
-        body { font-family: sans-serif; display: flex; justify-content: center; padding: 20px; background: #f0f2f5; }
-        .card { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); width: 100%; max-width: 600px; }
-        textarea { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 8px; margin-top: 10px; resize: vertical; }
-        button { background: #007bff; color: white; border: none; padding: 12px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; margin-top: 15px; width: 100%; }
-        button:disabled { background: #ccc; }
-        #result { white-space: pre-wrap; background: #f8f9fa; padding: 15px; border-radius: 8px; margin-top: 20px; border-left: 5px solid #007bff; display: none; }
-    </style>
-</head>
-<body>
-    <div class="card">
-        <h1>Máy Trộn Đề AI 🤖</h1>
-        <p>Dán nội dung đề thi của bạn vào đây:</p>
-        <textarea id="quizInput" rows="10" placeholder="Câu 1: ..."></textarea>
-        <button id="shuffleBtn" onclick="processAI()">Bắt đầu trộn bằng Gemini</button>
-        <div id="result"></div>
-    </div>
-
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TrangWebDauTien - Secure Exam Shuffler</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
     <script>
-        async function processAI() {
-            const btn = document.getElementById('shuffleBtn');
-            const input = document.getElementById('quizInput').value;
-            const resultDiv = document.getElementById('result');
-
-            if (!input) return alert("Bạn chưa nhập đề mà!");
-
-            btn.disabled = true;
-            btn.innerText = "Gemini đang suy nghĩ...";
-            resultDiv.style.display = "none";
-
-            try {
-                // Gọi tới "não bộ" Netlify Function
-                const response = await fetch('/.netlify/functions/shuffle', {
-                    method: 'POST',
-                    body: JSON.stringify({ text: input })
-                });
-                
-                const data = await response.json();
-                resultDiv.innerText = data.shuffledText;
-                resultDiv.style.display = "block";
-            } catch (error) {
-                alert("Có lỗi xảy ra rồi!");
-            } finally {
-                btn.disabled = false;
-                btn.innerText = "Bắt đầu trộn bằng Gemini";
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        primary: '#2563eb', // blue-600
+                        secondary: '#4f46e5', // indigo-600
+                    }
+                }
             }
         }
     </script>
+
+    <style>
+        /* Custom styles for things Tailwind is too verbose for */
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .drag-active {
+            border-color: #2563eb !important;
+            background-color: #eff6ff !important;
+        }
+
+        /* Custom Scrollbar for results */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 8px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #f1f5f9;
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 antialiased min-h-screen pb-12">
+
+    <!-- Header & Secure Mode Indicator -->
+    <nav class="bg-white shadow-sm border-b border-slate-200 sticky top-0 z-50">
+        <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-primary to-secondary flex items-center justify-center text-white shadow-md">
+                    <i class="fa-solid fa-shuffle text-xl"></i>
+                </div>
+                <h1 class="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary to-secondary">
+                    TrangWebDauTien
+                </h1>
+            </div>
+            
+            <!-- SECURE MODE INDICATOR -->
+            <div class="flex items-center gap-2 bg-green-50 text-green-700 px-3 py-1.5 rounded-full border border-green-200 text-sm font-medium shadow-sm" title="All processing happens in your browser. No data is sent to any server.">
+                <i class="fa-solid fa-shield-halved animate-pulse"></i>
+                <span class="hidden sm:inline">Secure Offline Mode</span>
+            </div>
+        </div>
+    </nav>
+
+    <main class="max-w-4xl mx-auto px-4 sm:px-6 mt-8">
+        
+        <!-- Intro Section -->
+        <div class="text-center mb-10">
+            <h2 class="text-3xl font-bold text-slate-900 mb-3">Exam Shuffler</h2>
+            <p class="text-slate-500 max-w-2xl mx-auto">Upload your Word document (.docx). We'll parse the questions, shuffle them securely in your browser, and generate new versions for you.</p>
+        </div>
+
+        <!-- Main Workspace Card -->
+        <div class="glass-panel rounded-2xl shadow-xl overflow-hidden mb-8">
+            
+            <div class="p-6 sm:p-8">
+                <!-- Step 1: Upload -->
+                <div class="mb-8">
+                    <h3 class="text-lg font-semibold mb-4 flex items-center gap-2">
+                        <span class="bg-blue-100 text-blue-700 w-6 h-6 rounded-full flex items-center justify-center text-sm">1</span> 
+                        Upload Exan File
+                    </h3>
+                    
+                    <!-- Drag & Drop Zone -->
+                    <div id="dropZone" class="border-2 border-dashed border-slate-300 rounded-xl p-10 flex flex-col items-center justify-center text-center transition-all duration-200 hover:bg-slate-50 cursor-pointer group relative">
+                        <input type="file" id="fileInput" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" accept=".docx" />
+                        
+                        <div class="w-16 h-16 bg-blue-50 text-blue-500 rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                            <i class="fa-solid fa-cloud-arrow-up text-2xl"></i>
+                        </div>
+                        <h4 class="text-lg font-medium text-slate-700 mb-1">Drag and drop your .docx file here</h4>
+                        <p class="text-sm text-slate-500">or click to browse from your computer</p>
+                        
+                        <!-- File chosen indicator -->
+                        <div id="fileStatus" class="mt-4 px-4 py-2 bg-blue-50 text-blue-700 rounded-lg text-sm font-medium hidden flex items-center gap-2">
+                            <i class="fa-solid fa-file-word"></i>
+                            <span id="fileNameDisplay">filename.docx</span>
+                            <button id="removeFileBtn" class="ml-2 text-blue-400 hover:text-blue-800 z-10 relative"><i class="fa-solid fa-times"></i></button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Step 2: Settings -->
+                <div class="mb-8">
+                    <h3 class="text-lg font-semibold mb-4 flex items-center gap-2">
+                        <span class="bg-blue-100 text-blue-700 w-6 h-6 rounded-full flex items-center justify-center text-sm">2</span> 
+                        Shuffle Settings
+                    </h3>
+                    
+                    <div class="grid sm:grid-cols-2 gap-4">
+                        <!-- Option A -->
+                        <label class="cursor-pointer relative">
+                            <input type="radio" name="shuffleMode" value="questions_only" class="peer sr-only" checked>
+                            <div class="rounded-xl border-2 border-slate-200 p-5 hover:bg-slate-50 peer-checked:border-primary peer-checked:bg-blue-50 transition-all">
+                                <div class="flex items-center justify-between mb-2">
+                                    <h4 class="font-medium text-slate-900">Option A</h4>
+                                    <i class="fa-solid fa-circle-check text-primary opacity-0 peer-checked:opacity-100 transition-opacity"></i>
+                                </div>
+                                <p class="text-sm text-slate-500">Shuffle only the order of the questions.</p>
+                            </div>
+                        </label>
+                        
+                        <!-- Option B -->
+                        <label class="cursor-pointer relative">
+                            <input type="radio" name="shuffleMode" value="questions_and_answers" class="peer sr-only">
+                            <div class="rounded-xl border-2 border-slate-200 p-5 hover:bg-slate-50 peer-checked:border-primary peer-checked:bg-blue-50 transition-all">
+                                <div class="flex items-center justify-between mb-2">
+                                    <h4 class="font-medium text-slate-900">Option B</h4>
+                                    <i class="fa-solid fa-circle-check text-primary opacity-0 peer-checked:opacity-100 transition-opacity"></i>
+                                </div>
+                                <p class="text-sm text-slate-500">Shuffle questions AND the options (A, B, C, D) within each question.</p>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Action Button -->
+                <button id="processBtn" class="w-full bg-gradient-to-r from-primary to-secondary hover:from-blue-700 hover:to-indigo-700 text-white font-medium py-4 rounded-xl shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 text-lg disabled:opacity-50 disabled:cursor-not-allowed">
+                    <i class="fa-solid fa-wand-magic-sparkles"></i>
+                    Shuffle Exam Now
+                </button>
+                
+                <!-- Error Message Container -->
+                <div id="errorContainer" class="mt-4 p-4 bg-red-50 text-red-700 rounded-lg border border-red-200 hidden flex gap-3">
+                    <i class="fa-solid fa-triangle-exclamation mt-0.5"></i>
+                    <p id="errorText" class="text-sm"></p>
+                </div>
+            </div>
+            
+        </div>
+
+        <!-- Step 3: Results Section (Hidden initially) -->
+        <div id="resultsSection" class="glass-panel rounded-2xl shadow-xl overflow-hidden hidden transform transition-all">
+            <div class="bg-slate-50 border-b border-slate-200 p-4 sm:p-6 flex flex-col sm:flex-row justify-between items-center gap-4">
+                <h3 class="text-lg font-semibold flex items-center gap-2 text-green-700">
+                    <i class="fa-solid fa-check-circle"></i> 
+                    Shuffle Complete!
+                </h3>
+                
+                <div class="flex gap-2 w-full sm:w-auto">
+                    <button id="exportWordBtn" class="flex-1 sm:flex-none bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-file-word"></i> Export .docx
+                    </button>
+                    <button id="exportPdfBtn" class="flex-1 sm:flex-none bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-file-pdf"></i> Export PDF
+                    </button>
+                </div>
+            </div>
+
+            <!-- Preview Area -->
+            <div class="p-6 sm:p-8 bg-white">
+                <div class="flex items-center justify-between mb-4">
+                    <h4 class="font-medium text-slate-700">Document Preview:</h4>
+                    <span class="text-xs bg-slate-100 text-slate-500 px-2 py-1 rounded border border-slate-200">Read-only</span>
+                </div>
+                
+                <div id="previewContainer" class="custom-scrollbar border border-slate-200 rounded-xl p-6 h-[500px] overflow-y-auto text-slate-800 text-sm sm:text-base leading-relaxed bg-slate-50/50">
+                    <!-- Shuffled content will be injected here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Format Guide Section -->
+        <div class="mt-12 bg-white rounded-xl shadow-sm border border-slate-200 p-6 sm:p-8">
+            <h3 class="text-lg font-semibold mb-4 text-slate-800 border-b border-slate-100 pb-2">
+                <i class="fa-solid fa-circle-info text-blue-500 mr-2"></i> How to format your Word document
+            </h3>
+            
+            <p class="text-sm text-slate-600 mb-4">For our regex parser to correctly identify your questions and answers, please follow this strictly:</p>
+            
+            <div class="bg-slate-800 text-slate-300 rounded-lg p-5 font-mono text-sm overflow-x-auto shadow-inner">
+<pre class="whitespace-pre-wrap">Câu 1: Thủ đô của Việt Nam là gì?
+A. Hà Nội
+B. Huế
+C. Đà Nẵng
+D. TP.HCM
+
+Câu 2: HTML viết tắt của từ gì?
+A. Hyper Text Markup Language
+B. High Text Machine Language
+C. Hyper Tabular Markup Language
+D. None of the above</pre>
+            </div>
+            
+            <ul class="mt-4 text-sm text-slate-600 space-y-2 list-disc pl-5">
+                <li>Questions must start with <strong class="text-blue-600">Câu X:</strong> (e.g., Câu 1:, Câu 20:). A colon or dot after the number is required.</li>
+                <li>Options must start with <strong class="text-blue-600">A.</strong>, <strong class="text-blue-600">B.</strong>, <strong class="text-blue-600">C.</strong>, <strong class="text-blue-600">D.</strong> on new lines.</li>
+                <li>Leave an empty line between questions for best results.</li>
+            </ul>
+        </div>
+        
+    </main>
+
+    <!-- Libraries via CDN -->
+    <!-- Mammoth.js for reading .docx -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+    
+    <!-- docx for generating .docx -->
+    <script src="https://unpkg.com/docx@8.2.3/build/index.js"></script>
+    
+    <!-- FileSaver for triggering downloads -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+    
+    <!-- html2pdf for generating PDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+    <!-- Application Logic -->
+    <script src="script.js"></script>
+
 </body>
 </html>
